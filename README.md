@@ -5,15 +5,17 @@ One-command install for OpenClaw Gateway on a VPS (or local), with Telegram and 
 ## Quick start (client)
 
 1. Get a Telegram bot token from [@BotFather](https://t.me/botfather).
-2. Clone this repo and run the installer:
+2. On your VPS, run **one command** (no git, no GitHub login):
 
    ```bash
-   git clone https://github.com/your-org/openclaw-install.git
-   cd openclaw-install
-   ./install.sh
+   curl -fsSL https://raw.githubusercontent.com/dewhammer/openclaw-install/main/scripts/bootstrap.sh | bash
    ```
 
-3. Open the Control UI at `http://<your-ip>:18789` and paste the gateway token the installer printed.
+   When prompted, paste your Telegram token. Save the gateway token the script prints.
+
+3. Open the Control UI at `http://<your-ip>:18789` and paste the gateway token in Settings.
+
+**Note:** This repo must be **public** so the bootstrap can download it without a password. If you use a fork, make the repo public or clients will need to clone with a [Personal Access Token](https://github.com/settings/tokens).
 
 Full steps: [docs/CLIENT-SETUP.md](docs/CLIENT-SETUP.md).
 

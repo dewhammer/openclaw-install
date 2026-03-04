@@ -4,9 +4,27 @@ Follow these in order.
 
 ---
 
-## Part A: Get the installer onto the VPS
+## Part A: Get the installer onto the VPS (one command, no login)
 
-You have two options.
+On the **VPS**, run this single line. It downloads and runs the installer — **no git and no GitHub username/password**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dewhammer/openclaw-install/main/scripts/bootstrap.sh | bash
+```
+
+**Requirement:** The GitHub repo must be **public**. If it's private, GitHub will not allow the download without a token.
+
+Optional: use a different product (e.g. `sales-assistant`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dewhammer/openclaw-install/main/scripts/bootstrap.sh | bash -s -- --product sales-assistant
+```
+
+---
+
+### Alternative: clone with git (needs repo public or a token)
+
+If you prefer to clone first (e.g. to inspect files): **Public repo** = no login. **Private repo** = use a [Personal Access Token](https://github.com/settings/tokens) as the password (GitHub no longer accepts account passwords).
 
 ### Option 1: Copy from your Mac (no GitHub)
 
@@ -69,33 +87,24 @@ You don’t need to do anything else in Telegram with that token; the installer 
    ssh -i /Users/fidelis/billion/.ssh-keys/cursor_hostinger -o StrictHostKeyChecking=no root@45.93.137.107
    ```
 
-2. **Go to the installer directory** (name depends on how you got the files):
-   - If you used **Option 1** (scp):  
-     `cd ~/openclaw`
-   - If you used **Option 2** (clone):  
-     `cd ~/openclaw-install`
-
-3. **Run the installer:**
+2. **Run the one-command installer** (no need to cd anywhere):
 
    ```bash
-   ./install.sh
+   curl -fsSL https://raw.githubusercontent.com/dewhammer/openclaw-install/main/scripts/bootstrap.sh | bash
    ```
 
-4. When it asks **“Telegram bot token”**, paste the token you got from BotFather and press Enter.
+3. When it asks **“Telegram bot token”**, paste the token you got from BotFather and press Enter.
 
-5. It will then:
-   - Show a **gateway token** (save it).
-   - Ask whether to enable Mission Control (press Enter for no, or type `1` for yes).
-   - Create `.env`, set up the state dir, add the Telegram channel, and start the gateway.
+4. It will then show a **gateway token** (save it), ask whether to enable Mission Control (press Enter for no), create `.env`, set up the state dir, add the Telegram channel, and start the gateway.
 
-6. When it finishes, it will print something like:
+5. When it finishes, it will print something like:
    - Control UI: `http://127.0.0.1:18789`
    - Gateway token: `...`
    - On the VPS you’d open: **`http://45.93.137.107:18789`** (your VPS IP + port).
 
-7. **In your browser** open `http://45.93.137.107:18789`, go to **Settings**, and paste the **gateway token** so the UI can talk to the gateway.
+6. **In your browser** open `http://45.93.137.107:18789`, go to **Settings**, and paste the **gateway token** so the UI can talk to the gateway.
 
-8. **In Telegram**, find your bot by its username and send it a message. OpenClaw should now be connected to that bot.
+7. **In Telegram**, find your bot by its username and send it a message. OpenClaw should now be connected to that bot.
 
 ---
 
@@ -103,9 +112,9 @@ You don’t need to do anything else in Telegram with that token; the installer 
 
 | Step | Where | What you do |
 |------|--------|-------------|
-| 1 | Mac | Copy repo to VPS with `scp` (or push to GitHub and clone on VPS). |
+| 1 | VPS | Run the one-liner (curl … \| bash) — no git, no GitHub login. |
 | 2 | Telegram | Message @BotFather → `/newbot` → get **token**. |
-| 3 | VPS | `./install.sh` → paste **token** when asked → save the **gateway token**. |
+| 3 | VPS | When the script asks, paste **token** → save the **gateway token**. |
 | 4 | Browser | Open `http://<VPS-IP>:18789` → Settings → paste **gateway token**. |
 | 5 | Telegram | Open your bot and chat; OpenClaw is connected. |
 
