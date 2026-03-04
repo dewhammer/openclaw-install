@@ -12,16 +12,28 @@ ARCHIVE_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 echo "OpenClaw Plug-and-Play bootstrap"
 echo "Downloading installer from GitHub (${REPO} ${BRANCH})..."
 mkdir -p "$INSTALL_DIR"
-if ! curl -fsSL "$ARCHIVE_URL" | tar -xzf - -C "$INSTALL_DIR"; then
+TARBALL="${INSTALL_DIR}/repo.tar.gz"
+if ! curl -fsSL "$ARCHIVE_URL" -o "$TARBALL"; then
   echo "Download failed. If the repo is private, make it public or use: git clone then ./install.sh"
   rm -rf "$INSTALL_DIR"
   exit 1
 fi
+if ! tar -xzf "$TARBALL" -C "$INSTALL_DIR"; then
+  echo "Extract failed."
+  rm -rf "$INSTALL_DIR"
+  exit 1
+fi
+rm -f "$TARBALL"
 
-# GitHub tarball extracts to openclaw-install-<branch>
-EXTRACTED=$(find "$INSTALL_DIR" -maxdepth 1 -type d -name 'openclaw-install-*' | head -1)
+# GitHub tarball extracts to <repo-name>-<branch> (e.g. openclaw-install-main)
+REPO_NAME="${REPO##*/}"
+EXTRACTED="$INSTALL_DIR/${REPO_NAME}-${BRANCH}"
+if [[ ! -d "$EXTRACTED" ]]; then
+  EXTRACTED=$(find "$INSTALL_DIR" -maxdepth 1 -type d ! -path "$INSTALL_DIR" 2>/dev/null | head -1)
+fi
 if [[ -z "$EXTRACTED" ]] || [[ ! -f "$EXTRACTED/install.sh" ]]; then
-  echo "Unexpected archive layout."
+  echo "Unexpected archive layout (no install.sh). Contents of $INSTALL_DIR:"
+  ls -la "$INSTALL_DIR"
   rm -rf "$INSTALL_DIR"
   exit 1
 fi
