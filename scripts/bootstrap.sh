@@ -2,6 +2,7 @@
 # OpenClaw Plug-and-Play: one-command install (no git, no GitHub login).
 # Usage: curl -fsSL https://raw.githubusercontent.com/dewhammer/openclaw-install/main/scripts/bootstrap.sh | bash
 # Or:    curl -fsSL ... | bash -s -- --product sales-assistant
+# v2 - download tarball to file, then extract
 set -e
 
 REPO="${OPENCLAW_INSTALL_REPO:-dewhammer/openclaw-install}"
