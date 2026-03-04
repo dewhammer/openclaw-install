@@ -1,0 +1,4 @@
+.env
+*.tgz
+.DS_Store
+products/*/state.tgz

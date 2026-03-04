@@ -1,0 +1,34 @@
+# OpenClaw Plug-and-Play stack (Gateway + CLI for one-off commands).
+# For Mission Control dashboard, see docs/CLIENT-SETUP.md.
+name: openclaw-plug-and-play
+
+services:
+  openclaw-gateway:
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-18789}:18789"
+    environment:
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-lan}
+    volumes:
+      - "${OPENCLAW_STATE_DIR:-./openclaw-state}:/home/node/.openclaw"
+    command: ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:18789/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  openclaw-cli:
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    volumes:
+      - "${OPENCLAW_STATE_DIR:-./openclaw-state}:/home/node/.openclaw"
+    environment:
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+    profiles:
+      - tools
+    entrypoint: ["node", "openclaw.mjs"]
+    command: ["--help"]

@@ -1,0 +1,11 @@
+{
+  "gateway": {
+    "bind": "lan",
+    "mode": "local"
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  }
+}
