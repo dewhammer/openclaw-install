@@ -38,7 +38,10 @@ fi
 echo "OpenClaw Plug-and-Play Installer (product: $PRODUCT)"
 echo ""
 
-read -r -p "Telegram bot token (from https://t.me/botfather): " TELEGRAM_BOT_TOKEN
+# When stdin is piped (curl | bash), read from the terminal instead
+prompt_read() { if [[ -t 0 ]]; then read "$@"; else read "$@" </dev/tty; fi; }
+
+prompt_read -r -p "Telegram bot token (from https://t.me/botfather): " TELEGRAM_BOT_TOKEN
 if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
   echo "Telegram token is required."
   exit 1
@@ -48,12 +51,12 @@ fi
 OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-$(openssl rand -hex 24)}"
 echo "Generated OPENCLAW_GATEWAY_TOKEN (save it to access the Control UI)."
 
-read -r -p "Enable Mission Control dashboard? (0=no, 1=yes) [0]: " ENABLE_MC
+prompt_read -r -p "Enable Mission Control dashboard? (0=no, 1=yes) [0]: " ENABLE_MC
 ENABLE_MISSION_CONTROL="${ENABLE_MC:-0}"
 
 LOCAL_AUTH_TOKEN=""
 if [[ "$ENABLE_MISSION_CONTROL" == "1" ]]; then
-  read -r -p "Mission Control auth token (min 50 chars, or press Enter to generate): " LOCAL_AUTH_TOKEN
+  prompt_read -r -p "Mission Control auth token (min 50 chars, or press Enter to generate): " LOCAL_AUTH_TOKEN
   if [[ -z "$LOCAL_AUTH_TOKEN" ]] || [[ ${#LOCAL_AUTH_TOKEN} -lt 50 ]]; then
     LOCAL_AUTH_TOKEN="$(openssl rand -base64 48)"
     echo "Generated LOCAL_AUTH_TOKEN for Mission Control."
