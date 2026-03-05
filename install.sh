@@ -40,10 +40,14 @@ prompt_read() { if [[ -t 0 ]]; then read "$@"; else read "$@" </dev/tty; fi; }
 # --- Detect public IP for controlUi.allowedOrigins ---
 detect_ip() {
   local ip=""
-  ip=$(curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null) || \
-  ip=$(curl -fsSL --max-time 5 https://api.ipify.org 2>/dev/null) || \
-  ip=$(hostname -I 2>/dev/null | awk '{print $1}') || \
+  # Force IPv4 (-4) so we get an address browsers can actually use
+  ip=$(curl -4 -fsSL --max-time 5 https://ifconfig.me 2>/dev/null) || \
+  ip=$(curl -4 -fsSL --max-time 5 https://api.ipify.org 2>/dev/null) || \
+  ip=$(curl -4 -fsSL --max-time 5 https://icanhazip.com 2>/dev/null) || \
+  ip=$(hostname -I 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1) || \
   ip="127.0.0.1"
+  # Strip any whitespace/newlines
+  ip=$(echo "$ip" | tr -d '[:space:]')
   echo "$ip"
 }
 
