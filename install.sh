@@ -122,13 +122,20 @@ cat > "$OPENCLAW_STATE_DIR/openclaw.json" <<OCEOF
   "gateway": {
     "bind": "lan",
     "mode": "local",
+    "port": ${GATEWAY_PORT},
+    "trustedProxies": ["0.0.0.0/0"],
     "controlUi": {
+      "enabled": true,
       "allowedOrigins": [
         "http://${SERVER_IP}:${GATEWAY_PORT}",
         "http://127.0.0.1:${GATEWAY_PORT}",
         "http://localhost:${GATEWAY_PORT}"
       ],
       "allowInsecureAuth": true
+    },
+    "auth": {
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   },
   "agents": {
