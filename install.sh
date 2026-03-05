@@ -161,26 +161,41 @@ echo "Adding Telegram channel..."
 $COMPOSE_CMD --profile tools run --rm -T openclaw-cli channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN" 2>/dev/null || true
 
 # --- Done ---
+# Write a clickable-url.txt so the user can always find the URL
 DASHBOARD_URL="http://${SERVER_IP}:${GATEWAY_PORT}/#token=${OPENCLAW_GATEWAY_TOKEN}"
+echo "$DASHBOARD_URL" > "$SCRIPT_DIR/dashboard-url.txt"
 
-echo ""
-echo "=========================================="
-echo "  OpenClaw is running!"
-echo "=========================================="
-echo ""
-echo "  Open this URL in your browser:"
-echo ""
-echo "    $DASHBOARD_URL"
-echo ""
-echo "  (The token is already embedded in the URL — just open it.)"
-echo ""
-echo "  Gateway token (save this): $OPENCLAW_GATEWAY_TOKEN"
-echo "  State dir: $OPENCLAW_STATE_DIR"
-echo ""
-echo "  To restart:  cd $(pwd) && $COMPOSE_CMD restart openclaw-gateway"
-echo "  To stop:     cd $(pwd) && $COMPOSE_CMD down"
-echo "  To update:   cd $(pwd) && $COMPOSE_CMD pull && $COMPOSE_CMD up -d"
-echo ""
-echo "  If Telegram was not added, run:"
-echo "    cd $(pwd) && $COMPOSE_CMD --profile tools run --rm openclaw-cli channels add --channel telegram --token YOUR_TOKEN"
-echo ""
+cat <<DONE
+
+==========================================
+  OpenClaw is running!
+==========================================
+
+  STEP 1: Copy this entire line (triple-click to select the whole line):
+
+$DASHBOARD_URL
+
+  STEP 2: Paste it into your browser ADDRESS BAR (not the search box).
+
+  If that does not work, open this in two steps:
+    1. Go to:  http://${SERVER_IP}:${GATEWAY_PORT}
+    2. In the Gateway Token field, paste:  ${OPENCLAW_GATEWAY_TOKEN}
+    3. Click Connect.
+
+  This URL is also saved to: $(pwd)/dashboard-url.txt
+
+------------------------------------------
+  Gateway token: $OPENCLAW_GATEWAY_TOKEN
+  State dir:     $OPENCLAW_STATE_DIR
+------------------------------------------
+
+  Useful commands:
+    Restart:  cd $(pwd) && $COMPOSE_CMD restart openclaw-gateway
+    Stop:     cd $(pwd) && $COMPOSE_CMD down
+    Update:   cd $(pwd) && $COMPOSE_CMD pull && $COMPOSE_CMD up -d
+
+  If Telegram was not added:
+    cd $(pwd)
+    $COMPOSE_CMD --profile tools run --rm openclaw-cli channels add --channel telegram --token YOUR_TOKEN
+
+DONE
