@@ -34,12 +34,26 @@ if ! docker compose version &>/dev/null; then
   COMPOSE_CMD="docker-compose"
 fi
 
-# --- Prompts ---
-echo "OpenClaw Plug-and-Play Installer (product: $PRODUCT)"
-echo ""
-
 # When stdin is piped (curl | bash), read from the terminal instead
 prompt_read() { if [[ -t 0 ]]; then read "$@"; else read "$@" </dev/tty; fi; }
+
+# --- Detect public IP for controlUi.allowedOrigins ---
+detect_ip() {
+  local ip=""
+  ip=$(curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null) || \
+  ip=$(curl -fsSL --max-time 5 https://api.ipify.org 2>/dev/null) || \
+  ip=$(hostname -I 2>/dev/null | awk '{print $1}') || \
+  ip="127.0.0.1"
+  echo "$ip"
+}
+
+# --- Prompts ---
+echo ""
+echo "=========================================="
+echo "  OpenClaw Plug-and-Play Installer"
+echo "  Product: $PRODUCT"
+echo "=========================================="
+echo ""
 
 prompt_read -r -p "Telegram bot token (from https://t.me/botfather): " TELEGRAM_BOT_TOKEN
 if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
@@ -47,9 +61,7 @@ if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
   exit 1
 fi
 
-# Generate gateway token if not set
 OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-$(openssl rand -hex 24)}"
-echo "Generated OPENCLAW_GATEWAY_TOKEN (save it to access the Control UI)."
 
 prompt_read -r -p "Enable Mission Control dashboard? (0=no, 1=yes) [0]: " ENABLE_MC
 ENABLE_MISSION_CONTROL="${ENABLE_MC:-0}"
@@ -67,7 +79,6 @@ fi
 OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$(pwd)/openclaw-state}"
 GATEWAY_PORT="${GATEWAY_PORT:-18789}"
 
-# Build .env: write vars we set, then append rest from .env.example (skip lines we wrote)
 {
   echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
   echo "OPENCLAW_GATEWAY_TOKEN=$OPENCLAW_GATEWAY_TOKEN"
@@ -92,26 +103,84 @@ elif [[ -f "$PRODUCT_DIR/state.tgz" ]]; then
   echo "Unpacking product state.tgz..."
   tar -xzf "$PRODUCT_DIR/state.tgz" -C "$OPENCLAW_STATE_DIR"
 else
-  echo "No state-template or state.tgz for product '$PRODUCT'; using empty state (onboarding may be required)."
+  echo "No state-template or state.tgz for product '$PRODUCT'; using empty state."
 fi
 
-# Ensure workspace exists
 mkdir -p "$OPENCLAW_STATE_DIR/workspace"
 
-# --- Add Telegram channel via CLI ---
-echo "Adding Telegram channel..."
-$COMPOSE_CMD run --rm -T openclaw-cli channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN" || true
-# Allow failure if CLI expects gateway; channel can be added after first start
+# --- Write openclaw.json with correct controlUi settings ---
+echo "Detecting server IP..."
+SERVER_IP=$(detect_ip)
+echo "Server IP: $SERVER_IP"
 
-# --- Start stack ---
+cat > "$OPENCLAW_STATE_DIR/openclaw.json" <<OCEOF
+{
+  "gateway": {
+    "bind": "lan",
+    "mode": "local",
+    "controlUi": {
+      "allowedOrigins": [
+        "http://${SERVER_IP}:${GATEWAY_PORT}",
+        "http://127.0.0.1:${GATEWAY_PORT}",
+        "http://localhost:${GATEWAY_PORT}"
+      ],
+      "allowInsecureAuth": true
+    }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  }
+}
+OCEOF
+
+# --- Fix permissions for container (runs as uid 1000 / node) ---
+chown -R 1000:1000 "$OPENCLAW_STATE_DIR" 2>/dev/null || true
+
+# --- Pull image first ---
+echo "Pulling OpenClaw image (this may take a minute)..."
+$COMPOSE_CMD pull openclaw-gateway
+
+# --- Start gateway ---
 echo "Starting OpenClaw Gateway..."
 $COMPOSE_CMD up -d openclaw-gateway
 
+# Wait for gateway to be ready
+echo "Waiting for gateway to start..."
+for i in $(seq 1 30); do
+  if curl -fsSL -o /dev/null "http://127.0.0.1:${GATEWAY_PORT}/healthz" 2>/dev/null; then
+    echo "Gateway is healthy."
+    break
+  fi
+  sleep 2
+done
+
+# --- Add Telegram channel ---
+echo "Adding Telegram channel..."
+$COMPOSE_CMD --profile tools run --rm -T openclaw-cli channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN" 2>/dev/null || true
+
+# --- Done ---
+DASHBOARD_URL="http://${SERVER_IP}:${GATEWAY_PORT}/#token=${OPENCLAW_GATEWAY_TOKEN}"
+
 echo ""
-echo "Done. Gateway is running."
-echo "  Control UI: http://127.0.0.1:${GATEWAY_PORT}"
-echo "  Gateway token: $OPENCLAW_GATEWAY_TOKEN"
+echo "=========================================="
+echo "  OpenClaw is running!"
+echo "=========================================="
+echo ""
+echo "  Open this URL in your browser:"
+echo ""
+echo "    $DASHBOARD_URL"
+echo ""
+echo "  (The token is already embedded in the URL — just open it.)"
+echo ""
+echo "  Gateway token (save this): $OPENCLAW_GATEWAY_TOKEN"
 echo "  State dir: $OPENCLAW_STATE_DIR"
 echo ""
-echo "If Telegram was not added, run: $COMPOSE_CMD run --rm openclaw-cli channels add --channel telegram --token YOUR_TOKEN"
-echo "Then open the Control UI, go to Settings, and paste the gateway token."
+echo "  To restart:  cd $(pwd) && $COMPOSE_CMD restart openclaw-gateway"
+echo "  To stop:     cd $(pwd) && $COMPOSE_CMD down"
+echo "  To update:   cd $(pwd) && $COMPOSE_CMD pull && $COMPOSE_CMD up -d"
+echo ""
+echo "  If Telegram was not added, run:"
+echo "    cd $(pwd) && $COMPOSE_CMD --profile tools run --rm openclaw-cli channels add --channel telegram --token YOUR_TOKEN"
+echo ""
