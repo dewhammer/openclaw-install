@@ -222,6 +222,13 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
+# --- Auto-approve any pending device pairing requests ---
+echo "Approving device pairing requests..."
+PENDING=$($COMPOSE_CMD --profile tools run --rm -T openclaw-cli devices list 2>/dev/null | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' || true)
+for req_id in $PENDING; do
+  $COMPOSE_CMD --profile tools run --rm -T openclaw-cli devices approve "$req_id" 2>/dev/null || true
+done
+
 # --- Add Telegram channel ---
 echo "Adding Telegram channel..."
 $COMPOSE_CMD --profile tools run --rm -T openclaw-cli channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN" 2>/dev/null || true
