@@ -24,11 +24,19 @@ services:
 
   openclaw-cli:
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    network_mode: "service:openclaw-gateway"
     volumes:
       - "${OPENCLAW_STATE_DIR:-./openclaw-state}:/home/node/.openclaw"
     environment:
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
     profiles:
       - tools
+    depends_on:
+      - openclaw-gateway
     entrypoint: ["node", "openclaw.mjs"]
     command: ["--help"]
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
