@@ -165,6 +165,12 @@ if [[ -n "$OPENCLAW_DOMAIN" ]]; then
 
   if [[ -n "$TRAEFIK_DYN_DIR" ]]; then
     echo "Setting up HTTPS via Traefik for ${OPENCLAW_DOMAIN}..."
+    # Traefik runs in Docker; 127.0.0.1 is the container itself, not the host.
+    # Use the Docker bridge gateway IP so Traefik can reach the host-published port.
+    DOCKER_HOST_IP=$(docker network inspect bridge --format '{{range .IPAM.Config}}{{.Gateway}}{{end}}' 2>/dev/null)
+    if [[ -z "$DOCKER_HOST_IP" ]]; then
+      DOCKER_HOST_IP="172.17.0.1"
+    fi
     cat > "${TRAEFIK_DYN_DIR}/openclaw.yml" <<TRAEFIKEOF
 http:
   routers:
@@ -188,7 +194,7 @@ http:
     openclaw-service:
       loadBalancer:
         servers:
-          - url: "http://127.0.0.1:${GATEWAY_PORT}"
+          - url: "http://${DOCKER_HOST_IP}:${GATEWAY_PORT}"
 TRAEFIKEOF
     echo "Traefik config written to ${TRAEFIK_DYN_DIR}/openclaw.yml"
     echo "SSL certificate will be provisioned automatically by Let's Encrypt."
